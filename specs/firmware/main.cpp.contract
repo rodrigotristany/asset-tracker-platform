@@ -1,0 +1,64 @@
+# Firmware Main Orchestration Contract
+
+## Composition Root
+
+`main.cpp` instantiates all concrete classes and wires them together:
+
+```cpp
+int main() {
+    Config config = load_device_config();
+
+    domain::Location current_location{};
+
+    GpsReader gps{GpsReader::Config{/* uart params */}};
+    WifiManager wifi{WifiManager::Config{/* ssid/password */}};
+    ApiClient api{wifi, ApiClient::Config{/* base_url, api_key */}};
+    Display display{Display::Config{/* lcd enabled */}};
+    BatteryMonitor battery{BatteryMonitor::Config{/* adc pin */}};
+    LocalQueue queue{LocalQueue::Config{/* max entries */}};
+    Timer fix_timer{Timer::Config{pdMS_TO_TICKS(1000)}}; // 1 Hz
+
+    gps.start();
+    display.show_status("Booting");
+
+    while (true) {
+        // 1. GPS reads
+        if (fix_timer.has_elapsed()) {
+            fix_timer.start();
+            std::optional<domain::Location> loc = gps.read_location();
+            if (loc) {
+                current_location = *loc;
+                display.show_location(current_location);
+            }
+        }
+
+        // 2. WiFi + send
+        if (wifi.is_connected()) {
+            if (current_location.satellites == 0) {
+                // GPS timeout fallback
+                current_location.is_stale = true;
+            }
+            bool sent = api.send_location(current_location);
+            if (!sent) {
+                // handled internally by ApiClient retry/queue logic
+            }
+        } else {
+            wifi.connect();
+        }
+
+        // 3. Battery (low priority)
+        std::optional<double> volts = battery.read_voltage();
+        // update display if needed
+
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+```
+
+## Communication Rules
+- Synchronous: direct return values
+- Asynchronous: not strictly required in Phase 1; event queue can be added in Phase 2
+
+## Error Recovery
+- `ApiClient` retries 3 times (1s, 2s, 4s) then sets `is_stale = true` on last-known position.
+- `LocalQueue` stores positions when WiFi is down; flushed on reconnection.

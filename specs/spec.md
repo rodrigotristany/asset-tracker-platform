@@ -20,6 +20,8 @@
 
 ## 2. Architecture Overview
 
+For visual diagrams, see [System Diagrams](diagrams.md).
+
 The system is composed of four completely independent layers. Each layer knows as little as possible about the others.
 
 ```
