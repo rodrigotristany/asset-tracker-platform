@@ -1,0 +1,18 @@
+using AssetTracker.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+
+namespace Microsoft.Extensions.DependencyInjection;
+
+public static class InfrastructureServiceCollectionExtensions
+{
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("Default")
+            ?? throw new InvalidOperationException("ConnectionStrings:Default configuration is required.");
+
+        services.AddDbContext<AssetTrackerDbContext>(options => options.UseSqlServer(connectionString));
+
+        return services;
+    }
+}
