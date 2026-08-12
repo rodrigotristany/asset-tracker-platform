@@ -1,0 +1,42 @@
+{
+  "configurations": [
+    {
+      "name": "Linux",
+      "includePath": [
+        "${workspaceFolder}",
+        "${workspaceFolder}/**",
+        "/home/rodrigotristany/esp/esp-idf/components/freertos/FreeRTOS-Kernel/include",
+        "/home/rodrigotristany/esp/esp-idf/components/freertos/FreeRTOS-Kernel-SMP/include",
+        "/home/rodrigotristany/esp/esp-idf/components/freertos/config/include",
+        "/home/rodrigotristany/esp/esp-idf/components/freertos/esp_additions/include",
+        "/home/rodrigotristany/esp/esp-idf/components/esp_system/include",
+        "/home/rodrigotristany/esp/esp-idf/components/esp_common/include",
+        "/home/rodrigotristany/esp/esp-idf/components/log/include",
+        "/home/rodrigotristany/esp/esp-idf/components/driver/include",
+        "/home/rodrigotristany/esp/esp-idf/components/hal/include",
+        "/home/rodrigotristany/esp/esp-idf/components/esp_rom/include",
+        "/home/rodrigotristany/esp/esp-idf/components/soc/esp32/include",
+        "/home/rodrigotristany/esp/esp-idf/components/soc/esp32c3/include",
+        "/home/rodrigotristany/esp/esp-idf/components/soc/esp32s3/include"
+      ],
+      "defines": [
+        "_GNU_SOURCE",
+        "ESP_PLATFORM"
+      ],
+      "cStandard": "c17",
+      "cppStandard": "c++20",
+      "intelliSenseMode": "linux-gcc-x64",
+      "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+      "browse": {
+        "path": [
+          "${workspaceFolder}",
+          "${workspaceFolder}/**",
+          "/home/rodrigotristany/esp/esp-idf"
+        ],
+        "limitSymbolsToIncludedHeaders": true,
+        "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db"
+      }
+    }
+  ],
+  "version": 4
+}
