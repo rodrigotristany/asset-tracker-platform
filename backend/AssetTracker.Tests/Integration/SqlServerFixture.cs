@@ -7,7 +7,7 @@ namespace AssetTracker.Tests.Integration;
 
 public class SqlServerFixture : IAsyncLifetime
 {
-    private readonly MsSqlContainer _container = new MsSqlBuilder().Build();
+    private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
 
     public string ConnectionString { get; private set; } = string.Empty;
 
