@@ -19,6 +19,7 @@ public static class InfrastructureServiceCollectionExtensions
             new DeviceRepository(connectionString, sp.GetRequiredService<AssetTrackerDbContext>()));
         services.AddScoped<ILocationRepository>(_ => new LocationRepository(connectionString));
         services.AddScoped<IRetentionRepository>(_ => new RetentionRepository(connectionString));
+        services.AddScoped<IAdminUserRepository, AdminUserRepository>();
 
         return services;
     }

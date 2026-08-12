@@ -55,6 +55,14 @@ public class AssetTrackerDbContext : DbContext
             entity.HasIndex(a => a.Username).IsUnique();
             entity.Property(a => a.PasswordHash).HasColumnName("password_hash").HasColumnType("varchar(60)").IsRequired();
             entity.Property(a => a.CreatedAt).HasColumnName("created_at").IsRequired();
+
+            entity.HasData(new
+            {
+                Id = 1,
+                Username = "admin",
+                PasswordHash = "$2a$11$w12C1tmcv4IC7YmfNIm9sOhwTrLehZMio3BmNDNKmrG/iDDu2RstC",
+                CreatedAt = new DateTime(2026, 8, 12, 0, 0, 0, DateTimeKind.Utc)
+            });
         });
     }
 }
