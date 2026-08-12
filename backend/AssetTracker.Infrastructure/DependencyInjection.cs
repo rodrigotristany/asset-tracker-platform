@@ -1,4 +1,6 @@
+using AssetTracker.Application.Interfaces;
 using AssetTracker.Infrastructure.Data;
+using AssetTracker.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -12,6 +14,9 @@ public static class InfrastructureServiceCollectionExtensions
             ?? throw new InvalidOperationException("ConnectionStrings:Default configuration is required.");
 
         services.AddDbContext<AssetTrackerDbContext>(options => options.UseSqlServer(connectionString));
+
+        services.AddScoped<IDeviceRepository>(sp =>
+            new DeviceRepository(connectionString, sp.GetRequiredService<AssetTrackerDbContext>()));
 
         return services;
     }
