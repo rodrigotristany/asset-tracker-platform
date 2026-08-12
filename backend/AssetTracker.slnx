@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="AssetTracker.Api/AssetTracker.Api.csproj" />
+  <Project Path="AssetTracker.Application/AssetTracker.Application.csproj" />
+  <Project Path="AssetTracker.Domain/AssetTracker.Domain.csproj" />
+  <Project Path="AssetTracker.Infrastructure/AssetTracker.Infrastructure.csproj" />
+  <Project Path="AssetTracker.Tests/AssetTracker.Tests.csproj" />
+</Solution>
