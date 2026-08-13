@@ -25,8 +25,8 @@ flowchart LR
     end
 
     subgraph Backend [Backend Layer]
-        API[FastAPI REST API]
-        DB[(PostgreSQL 30d retention)]
+        API[ASP.NET Core REST API]
+        DB[(SQL Server 30d retention)]
     end
 
     subgraph Frontend [Frontend Layer]
@@ -67,7 +67,7 @@ flowchart TD
     E -->|Yes| C
     E -->|No| D
     C --> F[201 Accepted]
-    F --> G[Persist to PostgreSQL]
+    F --> G[Persist to SQL Server]
     G --> H[Dashboard polls GET /locations/{device_id}]
     H --> I[Display latest location]
 
@@ -83,7 +83,7 @@ flowchart TD
     B --> C[BLE gateway connects]
     C --> D[Gateway reads batch]
     D --> E[POST /api/v1/locations/batch]
-    E --> F[Persist to PostgreSQL]
+    E --> F[Persist to SQL Server]
     F --> G[Dashboard displays]
 ```
 
@@ -216,44 +216,55 @@ classDiagram
 
 ```mermaid
 flowchart TD
-    subgraph Router [Routes Layer app/routers]
-        R1[locations.py]
-        R2[health.py]
+    subgraph Api [AssetTracker.Api]
+        C1[LocationsController]
+        C2[DevicesController]
+        C3[AuthController]
     end
 
-    subgraph Service [Service Layer app/services]
-        S1[location_service.py]
-        S2[auth_service.py]
+    subgraph App [AssetTracker.Application]
+        S1[LocationService]
+        S2[DeviceService]
+        S3[AuthService]
+        D1[Dtos]
     end
 
-    subgraph Repo [Repository Layer app/repositories]
-        REPO[location_repository.py]
+    subgraph Infra [AssetTracker.Infrastructure]
+        REPO1[LocationRepository - Dapper/SPs]
+        REPO2[DeviceRepository - Dapper/SPs + EF read]
+        REPO3[AdminUserRepository - EF Core]
+        CTX[AssetTrackerDbContext]
     end
 
-    subgraph DB [(PostgreSQL)]
-        T[(locations table)]
+    subgraph DB [(SQL Server)]
+        T1[(locations)]
+        T2[(devices)]
+        T3[(admin_users)]
+        SP[Stored Procedures]
     end
 
-    subgraph DTO [Pydantic DTOs app/schemas]
-        D1[LocationCreate]
-        D2[LocationRead]
-        D3[ErrorResponse]
-    end
+    C1 --> S1
+    C2 --> S2
+    C3 --> S3
+    S1 --> REPO1
+    S2 --> REPO2
+    S3 --> REPO3
+    REPO1 --> SP
+    REPO2 --> SP
+    REPO2 --> CTX
+    REPO3 --> CTX
+    SP --> T1
+    SP --> T2
+    CTX --> T2
+    CTX --> T3
+    C1 --> D1
+    C2 --> D1
+    C3 --> D1
 
-    R1 --> S1
-    R2 --> S1
-    S1 --> REPO
-    REPO --> T
-    R1 --> D1
-    R1 --> D2
-    S1 --> D2
-    REPO --> D2
-
-    style Router fill:#bbf,stroke:#333,stroke-width:2px
-    style Service fill:#bfb,stroke:#333,stroke-width:2px
-    style Repo fill:#ffb,stroke:#333,stroke-width:2px
+    style Api fill:#bbf,stroke:#333,stroke-width:2px
+    style App fill:#bfb,stroke:#333,stroke-width:2px
+    style Infra fill:#ffb,stroke:#333,stroke-width:2px
     style DB fill:#f99,stroke:#333,stroke-width:2px
-    style DTO fill:#9f9,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5
 ```
 
 ---
