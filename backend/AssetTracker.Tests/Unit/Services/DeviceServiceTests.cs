@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using AssetTracker.Application.Dtos;
 using AssetTracker.Application.Exceptions;
 using AssetTracker.Application.Interfaces;
@@ -31,6 +32,28 @@ public class DeviceServiceTests
 
         Assert.Equal("goat-003", result.DeviceId);
         Assert.False(string.IsNullOrWhiteSpace(result.ApiKey));
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WithNewDeviceId_ApiKeyRoundTripsToStoredHash()
+    {
+        byte[]? capturedHash = null;
+
+        _deviceRepository.Setup(r => r.GetByDeviceIdAsync("goat-004", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Device?)null);
+        _deviceRepository
+            .Setup(r => r.RegisterAsync("goat-004", It.IsAny<byte[]>(), "Goat 4", It.IsAny<CancellationToken>()))
+            .Callback<string, byte[], string?, CancellationToken>((_, apiKeyHash, _, _) => capturedHash = apiKeyHash)
+            .ReturnsAsync(Device.Reconstitute(1, "goat-004", new byte[] { 1 }, "Goat 4", true, DateTime.UtcNow));
+
+        var result = await _sut.RegisterAsync(new DeviceRegisterRequestDto { DeviceId = "goat-004", DisplayName = "Goat 4" }, CancellationToken.None);
+
+        Assert.NotNull(capturedHash);
+        var decodedKey = Convert.FromBase64String(result.ApiKey);
+        var computedHash = SHA256.HashData(decodedKey);
+
+        Assert.Equal(capturedHash, computedHash);
+        Assert.Equal(32, decodedKey.Length);
     }
 
     [Fact]
