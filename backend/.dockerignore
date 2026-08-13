@@ -1,0 +1,10 @@
+# Local build artifacts — don't bloat the build context or leak host-platform binaries
+# into the Linux build stage.
+**/bin/
+**/obj/
+
+# global.json pins the SDK version used by local dev tooling. That pinned patch isn't
+# published as a container image tag, so excluding it here lets the build stage use
+# whatever SDK version ships in the mcr.microsoft.com/dotnet/sdk:10.0 image instead of
+# failing to resolve an SDK that was never published to MCR.
+global.json
