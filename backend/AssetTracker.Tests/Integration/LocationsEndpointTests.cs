@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text.Json;
 using AssetTracker.Application.Dtos;
 using Xunit;
@@ -37,12 +38,81 @@ public class LocationsEndpointTests : IClassFixture<ApiFactoryFixture>
     }
 
     [Fact]
-    public async Task Create_WithoutApiKey_ReturnsUnauthorized()
+    public async Task Create_WithoutApiKey_ReturnsUnauthorizedWithEnvelope()
     {
         var response = await _client.PostAsJsonAsync("/api/v1/locations",
             new LocationCreateDto { DeviceId = "does-not-matter", Timestamp = DateTimeOffset.UtcNow, Latitude = 1, Longitude = 1 });
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        Assert.Equal("AUTHENTICATION_REQUIRED", body!["error"].GetString());
+    }
+
+    [Fact]
+    public async Task Create_WithMalformedApiKey_ReturnsUnauthorized()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/locations")
+        {
+            Content = JsonContent.Create(new LocationCreateDto
+            {
+                DeviceId = "does-not-matter", Timestamp = DateTimeOffset.UtcNow, Latitude = 1, Longitude = 1
+            })
+        };
+        // Not valid base64 - ApiKeyAuthenticationHandler must reject this cleanly, not 500.
+        request.Headers.Add("X-API-Key", "not-valid-base64!!!");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        Assert.Equal("AUTHENTICATION_REQUIRED", body!["error"].GetString());
+    }
+
+    [Fact]
+    public async Task Create_WithUnregisteredApiKey_ReturnsUnauthorized()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/locations")
+        {
+            Content = JsonContent.Create(new LocationCreateDto
+            {
+                DeviceId = "does-not-matter", Timestamp = DateTimeOffset.UtcNow, Latitude = 1, Longitude = 1
+            })
+        };
+        // Well-formed base64, but not a key that was ever issued to a registered device.
+        request.Headers.Add("X-API-Key", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        Assert.Equal("AUTHENTICATION_REQUIRED", body!["error"].GetString());
+    }
+
+    [Fact]
+    public async Task Create_WithMismatchedDeviceId_ReturnsForbidden()
+    {
+        var (_, apiKeyOfDeviceB) = await RegisterDeviceAsync();
+        var (deviceIdOfDeviceA, _) = await RegisterDeviceAsync();
+
+        // Device B's API key must not be usable to write location history claiming to be
+        // device A - that would let any registered device forge another device's data.
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/locations")
+        {
+            Content = JsonContent.Create(new LocationCreateDto
+            {
+                DeviceId = deviceIdOfDeviceA,
+                Timestamp = DateTimeOffset.UtcNow,
+                Latitude = 1,
+                Longitude = 1
+            })
+        };
+        request.Headers.Add("X-API-Key", apiKeyOfDeviceB);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        Assert.Equal("FORBIDDEN", body!["error"].GetString());
     }
 
     [Fact]
@@ -124,6 +194,72 @@ public class LocationsEndpointTests : IClassFixture<ApiFactoryFixture>
     }
 
     [Fact]
+    public async Task CreateBatch_WithoutApiKey_ReturnsUnauthorized()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/locations/batch",
+            new LocationBatchCreateDto
+            {
+                DeviceId = "does-not-matter",
+                Locations = new List<LocationCreateDto>
+                {
+                    new() { DeviceId = "does-not-matter", Timestamp = DateTimeOffset.UtcNow, Latitude = 1, Longitude = 1 }
+                }
+            });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        Assert.Equal("AUTHENTICATION_REQUIRED", body!["error"].GetString());
+    }
+
+    [Fact]
+    public async Task CreateBatch_WithEmptyLocations_ReturnsValidationError()
+    {
+        var (deviceId, apiKey) = await RegisterDeviceAsync();
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/locations/batch")
+        {
+            Content = JsonContent.Create(new LocationBatchCreateDto
+            {
+                DeviceId = deviceId,
+                Locations = new List<LocationCreateDto>()
+            })
+        };
+        request.Headers.Add("X-API-Key", apiKey);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        Assert.Equal("VALIDATION_ERROR", body!["error"].GetString());
+    }
+
+    [Fact]
+    public async Task CreateBatch_WithMismatchedDeviceId_ReturnsForbidden()
+    {
+        var (_, apiKeyOfDeviceB) = await RegisterDeviceAsync();
+        var (deviceIdOfDeviceA, _) = await RegisterDeviceAsync();
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/locations/batch")
+        {
+            Content = JsonContent.Create(new LocationBatchCreateDto
+            {
+                DeviceId = deviceIdOfDeviceA,
+                Locations = new List<LocationCreateDto>
+                {
+                    new() { DeviceId = deviceIdOfDeviceA, Timestamp = DateTimeOffset.UtcNow, Latitude = 1, Longitude = 1 }
+                }
+            })
+        };
+        request.Headers.Add("X-API-Key", apiKeyOfDeviceB);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        Assert.Equal("FORBIDDEN", body!["error"].GetString());
+    }
+
+    [Fact]
     public async Task GetLatestByDevice_WithoutJwt_ReturnsUnauthorized()
     {
         var response = await _client.GetAsync("/api/v1/locations/some-device");
@@ -157,7 +293,7 @@ public class LocationsEndpointTests : IClassFixture<ApiFactoryFixture>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<List<LocationReadDto>>();
-        Assert.Single(body!);
-        Assert.Equal(deviceId, body[0].DeviceId);
+        var single = Assert.Single(body!);
+        Assert.Equal(deviceId, single.DeviceId);
     }
 }
