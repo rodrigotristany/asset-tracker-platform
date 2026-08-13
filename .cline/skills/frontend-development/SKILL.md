@@ -39,7 +39,7 @@ Use this skill whenever editing or creating files under `dashboard/`, including 
    ```
 2. Use **TanStack Query** for all server state (fetching, caching, background refetching, loading/error states).
 3. Use **Zustand** only for local UI state (UI toggles, modals, filters). Do not use Zustand for server-derived data.
-4. API client types in `src/services/` must match backend Pydantic models exactly. Prefer generating types from the OpenAPI spec (`/docs`) when the backend is running; otherwise mirror the spec schemas manually until automation is in place.
+4. API client types in `src/services/` must match backend `Application.Dtos` types exactly. Prefer generating types from the OpenAPI spec (`/swagger`, served by Swashbuckle.AspNetCore in Development) when the backend is running; otherwise mirror the spec schemas manually until automation is in place.
 5. Use TypeScript strict mode. No `any` unless explicitly justified.
 6. Use Tailwind CSS for styling. Utility classes first; avoid inline styles.
 7. Dashboard is read-only for Phase 1. Authenticated with JWT session. No edit/create/delete flows.

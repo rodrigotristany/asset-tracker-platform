@@ -6,7 +6,7 @@ paths:
 # General Coding Rules
 
 ## Naming Conventions
-- **Functions / variables / files (C++, Python where applicable):** `snake_case`
+- **Functions / variables / files (C++):** `snake_case`
 - **Classes / structs / types (all languages):** `PascalCase`
 - **Constants / macros:** `UPPER_SNAKE_CASE`
 - **JSON / API payloads:** `camelCase` (matches spec schema)
