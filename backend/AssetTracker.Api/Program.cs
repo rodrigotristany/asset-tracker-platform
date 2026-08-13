@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using AssetTracker.Api.Auth;
 using AssetTracker.Api.Middleware;
@@ -74,12 +75,45 @@ builder.Services
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
+
+        // Without these handlers, the JWT scheme writes a bare 401/403 with no body, breaking the
+        // codebase-wide contract that every 4xx/5xx response uses the standard error envelope.
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = context =>
+            {
+                context.HandleResponse();
+                return ErrorResponseWriter.WriteAsync(
+                    context.HttpContext,
+                    HttpStatusCode.Unauthorized,
+                    "AUTHENTICATION_REQUIRED",
+                    "A valid JWT bearer token is required.");
+            },
+            OnForbidden = context =>
+                ErrorResponseWriter.WriteAsync(
+                    context.HttpContext,
+                    HttpStatusCode.Forbidden,
+                    "FORBIDDEN",
+                    "You do not have permission to access this resource.")
+        };
     })
     .AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(AuthSchemes.ApiKey, _ => { });
 
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+// AddInfrastructure reads ConnectionStrings:Default lazily (at DI-resolution time, per request)
+// rather than eagerly at startup, to accommodate WebApplicationFactory's config-override timing
+// in integration tests (see the comment in AddInfrastructure). That means a production deploy
+// with a missing/blank connection string would otherwise start up successfully and only fail on
+// the first real request. Resolve the fully-built (test-override-aware) configuration here, right
+// after Build(), to restore fail-fast startup behavior without reintroducing the eager-read bug.
+var startupConfiguration = app.Services.GetRequiredService<IConfiguration>();
+if (string.IsNullOrWhiteSpace(startupConfiguration.GetConnectionString("Default")))
+{
+    throw new InvalidOperationException("ConnectionStrings:Default configuration is required.");
+}
 
 if (app.Environment.IsDevelopment())
 {

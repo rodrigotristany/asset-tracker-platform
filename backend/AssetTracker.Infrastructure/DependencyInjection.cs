@@ -33,7 +33,14 @@ public static class InfrastructureServiceCollectionExtensions
             new RetentionRepository(GetConnectionString(sp.GetRequiredService<IConfiguration>())));
         services.AddScoped<IAdminUserRepository, AdminUserRepository>();
 
-        services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
+        // .ValidateOnStart() restores fail-fast startup behavior for a missing/blank Jwt:Key
+        // (registers a hosted service that validates options during host startup) while still
+        // binding from the DI-resolved IConfiguration, keeping compatibility with
+        // WebApplicationFactory's config-override timing used by integration tests.
+        services.AddOptions<JwtOptions>()
+            .Bind(configuration.GetSection("Jwt"))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.Key), "Jwt:Key configuration is required.")
+            .ValidateOnStart();
         services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 

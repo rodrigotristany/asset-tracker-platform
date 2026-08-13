@@ -1,6 +1,8 @@
+using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Encodings.Web;
+using AssetTracker.Api.Middleware;
 using AssetTracker.Application.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
@@ -51,5 +53,23 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
         var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
         return AuthenticateResult.Success(ticket);
+    }
+
+    protected override Task HandleChallengeAsync(AuthenticationProperties properties)
+    {
+        return ErrorResponseWriter.WriteAsync(
+            Context,
+            HttpStatusCode.Unauthorized,
+            "AUTHENTICATION_REQUIRED",
+            "A valid X-API-Key header is required.");
+    }
+
+    protected override Task HandleForbiddenAsync(AuthenticationProperties properties)
+    {
+        return ErrorResponseWriter.WriteAsync(
+            Context,
+            HttpStatusCode.Forbidden,
+            "FORBIDDEN",
+            "You do not have permission to access this resource.");
     }
 }
