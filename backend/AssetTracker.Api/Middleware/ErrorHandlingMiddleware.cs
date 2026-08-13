@@ -1,5 +1,4 @@
 using System.Net;
-using System.Text.Json;
 using AssetTracker.Application.Exceptions;
 
 namespace AssetTracker.Api.Middleware;
@@ -28,20 +27,16 @@ public class ErrorHandlingMiddleware
             _logger.LogError(exception, "Unhandled exception mapped to {StatusCode} {Error} for request {RequestId}",
                 statusCode, error, context.TraceIdentifier);
 
-            context.Response.ContentType = "application/json";
-            context.Response.StatusCode = (int)statusCode;
+            // Domain exceptions that are explicitly mapped below carry an intentional, safe
+            // client-facing message. Anything that falls through to the catch-all/500 branch is
+            // unmapped and unexpected (e.g. a SQL exception, a misconfiguration) and may contain
+            // internal details (connection strings, hostnames, stack info) - never echo
+            // exception.Message to the client in that case, only log it server-side.
+            var message = statusCode == HttpStatusCode.InternalServerError
+                ? "An unexpected error occurred."
+                : exception.Message;
 
-            var body = new
-            {
-                error,
-                message = exception.Message,
-                details = (object?)null
-            };
-
-            await context.Response.WriteAsync(JsonSerializer.Serialize(body, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            }));
+            await ErrorResponseWriter.WriteAsync(context, statusCode, error, message);
         }
     }
 
@@ -50,6 +45,7 @@ public class ErrorHandlingMiddleware
         DeviceNotFoundException => (HttpStatusCode.NotFound, "DEVICE_NOT_FOUND"),
         DeviceAlreadyExistsException => (HttpStatusCode.Conflict, "DEVICE_ALREADY_EXISTS"),
         InvalidCredentialsException => (HttpStatusCode.Unauthorized, "INVALID_CREDENTIALS"),
+        DeviceOwnershipMismatchException => (HttpStatusCode.Forbidden, "FORBIDDEN"),
         _ => (HttpStatusCode.InternalServerError, "INTERNAL_ERROR")
     };
 }
