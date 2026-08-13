@@ -1,16 +1,24 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace AssetTracker.Tests.Integration;
 
-public class HealthEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+// Uses ApiFactoryFixture (rather than a bare WebApplicationFactory<Program>) so startup
+// configuration is overridden the same way every other integration test suite overrides it.
+// appsettings.json's ConnectionStrings:Default/Jwt:Key are intentionally blank in the shipped
+// app (so the fail-fast ValidateOnStart()/startup checks actually fire on a real deploy that
+// forgets to set the real env vars) — a bare WebApplicationFactory<Program> would otherwise fail
+// to start here. The health endpoint never touches the database, so an unreachable placeholder
+// connection string is fine; this test deliberately does not need the real Testcontainers-backed
+// SqlServerFixture that the DB-touching endpoint tests use.
+public class HealthEndpointTests : IClassFixture<ApiFactoryFixture>
 {
     private readonly HttpClient _client;
 
-    public HealthEndpointTests(WebApplicationFactory<Program> factory)
+    public HealthEndpointTests(ApiFactoryFixture factory)
     {
+        factory.ConnectionString = "Server=unused;Database=unused;User Id=unused;Password=unused;TrustServerCertificate=True;";
         _client = factory.CreateClient();
     }
 
