@@ -68,7 +68,7 @@ flowchart TD
     E -->|No| D
     C --> F[201 Accepted]
     F --> G[Persist to SQL Server]
-    G --> H[Dashboard polls GET /locations/{device_id}]
+    G --> H[Dashboard polls GET /locations/device_id]
     H --> I[Display latest location]
 
     C -->|3xx retry| C
