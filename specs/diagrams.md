@@ -236,7 +236,7 @@ flowchart TD
         CTX[AssetTrackerDbContext]
     end
 
-    subgraph DB [(SQL Server)]
+    subgraph DB [SQL Server]
         T1[(locations)]
         T2[(devices)]
         T3[(admin_users)]
