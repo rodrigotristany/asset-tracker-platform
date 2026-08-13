@@ -1,6 +1,7 @@
 using AssetTracker.Application.Interfaces;
 using AssetTracker.Infrastructure.Data;
 using AssetTracker.Infrastructure.Repositories;
+using AssetTracker.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -20,6 +21,10 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ILocationRepository>(_ => new LocationRepository(connectionString));
         services.AddScoped<IRetentionRepository>(_ => new RetentionRepository(connectionString));
         services.AddScoped<IAdminUserRepository, AdminUserRepository>();
+
+        services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
+        services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
+        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
         return services;
     }
