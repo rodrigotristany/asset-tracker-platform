@@ -23,7 +23,7 @@ paths:
 ## Comments & Documentation
 - Document all **public APIs** (headers, public methods, exported functions).
 - Use Doxygen style (`/** ... */`) for C++ firmware.
-- Use Google-style docstrings for Python backend.
+- Use XML doc comments (`///`) for public C# APIs in the backend.
 - Use JSDoc for TypeScript dashboard code.
 - No requirement to document private helpers unless logic is non-obvious.
 

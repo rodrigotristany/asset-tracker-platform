@@ -38,7 +38,7 @@ See `schemas.md` for exact DTOs.
 {"id": 1234, "status": "accepted"}
 ```
 
-**Error:** `400/401` with standard envelope.
+**Error:** `400/401` with standard envelope. Also `403` (`"error": "FORBIDDEN"`) if the authenticated device's own identity doesn't match the request's `deviceId` — see Notes below.
 
 ### POST /api/v1/devices
 
@@ -72,6 +72,7 @@ The `apiKey` is shown exactly once — only its SHA-256 hash is stored (`devices
 
 ## Notes
 - Devices authenticate via `X-API-Key` header (raw key, base64-encoded 32 random bytes — validated by decoding and re-hashing with SHA-256, then comparing to `devices.api_key_hash`).
+- **Device ownership check:** `POST /api/v1/locations` and `POST /api/v1/locations/batch` additionally verify that the authenticated device's own identity matches the `deviceId` in the request body (for batch, every item's `deviceId` too) — an authenticated device cannot write location data on behalf of a different `deviceId`. A mismatch raises `DeviceOwnershipMismatchException`, mapped by `ErrorHandlingMiddleware` to `403 Forbidden` with `"error": "FORBIDDEN"`.
 - Dashboard admin authenticates via JWT (`Microsoft.AspNetCore.Authentication.JwtBearer`), obtained from `/api/v1/auth/login`.
 - Swagger UI served at `/swagger` in the Development environment (via Swashbuckle.AspNetCore) — the ASP.NET Core equivalent of the old Python-era spec's auto-generated docs route.
 - Gzip response compression enabled via `Microsoft.AspNetCore.ResponseCompression`.

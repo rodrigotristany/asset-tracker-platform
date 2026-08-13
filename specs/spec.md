@@ -358,6 +358,7 @@ See `specs/backend/models.md` for the full table/procedure reference and the EF 
 **Errors:**
 - `400 Bad Request` — Validation error (missing fields, invalid coordinates)
 - `401 Unauthorized` — Missing or invalid API key / JWT
+- `403 Forbidden` — Authenticated device's identity doesn't match the request's `deviceId` (`"error": "FORBIDDEN"`); applies to both `/api/v1/locations` and `/api/v1/locations/batch` (checked per-item for batch)
 - `404 Not Found` — Unknown `deviceId` on a location write
 - `409 Conflict` — Duplicate `deviceId` on device registration
 
