@@ -5,15 +5,14 @@ description: Enforces testing standards across firmware, backend, and E2E with c
 
 triggers:
   paths:
-    - "**/test_*.py"
-    - "**/*test*.py"
-    - "**/*spec*.py"
     - "firmware/**/test_*.cpp"
+    - "backend/AssetTracker.Tests/**"
   keywords:
     - "test"
-    - "pytest"
+    - "xunit"
     - "coverage"
     - "testcontainers"
+    - "moq"
     - "mock"
     - "e2e"
 
@@ -42,22 +41,22 @@ Use this skill whenever writing, modifying, or running tests for firmware, backe
 7. Use logic analyzer captures as test fixtures for UART behavior validation.
 
 ### Backend
-1. Use pytest as the test runner.
-2. Use PostgreSQL test containers (e.g., `pytest-docker` or `testcontainers`) for integration tests. Avoid SQLite in-memory for production-parity tests.
-3. Test layout:
-   - `backend/tests/unit/` — schemas, pure logic, utilities
-   - `backend/tests/integration/` — API endpoints with test database
-   - `backend/tests/e2e/` — full pipeline; manual execution in Phase 1
+1. Use xUnit as the test runner, all in the single `AssetTracker.Tests` project.
+2. Use a **Testcontainers-provisioned SQL Server** for integration tests. Avoid an in-memory/SQLite fake for production-parity tests.
+3. Test layout (within `AssetTracker.Tests`):
+   - `Unit/` — DTOs, pure logic, validation
+   - `Integration/` — API endpoints (`WebApplicationFactory<Program>`) and repositories against a Testcontainers SQL Server
+   - `E2E/` — full pipeline; manual execution in Phase 1
 4. Every endpoint must have at least one integration test covering:
    - Happy path
    - Validation errors
    - Authentication/authorization failures
-5. Pydantic schemas must have unit tests for validation rules, defaults, and serialization.
-6. Services must have unit tests for business logic.
-7. Use `pytest-mock` for patching dependencies. Use `responses` or `respx` for mocking external HTTP calls.
-8. Dependency injection must be used to enable mock injection. Avoid monkey-patching.
-9. Coverage target: 80% of `backend/app/` code.
-10. Run `pytest` automatically after backend changes.
+5. DTOs (`Application.Dtos`) must have unit tests for `DataAnnotations` validation rules, defaults, and serialization.
+6. Services (`Application` layer) must have unit tests for business logic.
+7. Use Moq for patching dependencies. Use `WireMock.Net` or a similar HTTP stub for mocking external HTTP calls.
+8. Dependency injection must be used to enable mock injection. Avoid static/service-locator patterns in tests.
+9. Coverage target: 80% of `AssetTracker.Application/` and `AssetTracker.Infrastructure/` code.
+10. Run `dotnet test AssetTracker.Tests/AssetTracker.Tests.csproj` (from `backend/`) automatically after backend changes.
 
 ### E2E
 1. Phase 1 E2E validation is a manual checklist executed on real hardware only.

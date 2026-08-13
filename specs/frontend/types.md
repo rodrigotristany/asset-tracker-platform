@@ -1,6 +1,6 @@
 # Frontend Types — TypeScript
 
-## Location (from backend Pydantic schema)
+## Location (from backend DTO schema)
 
 ```typescript
 export interface Location {

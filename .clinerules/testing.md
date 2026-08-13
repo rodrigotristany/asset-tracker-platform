@@ -15,20 +15,20 @@ paths:
 - **Test Location:** Co-located with source files (e.g., `firmware/gps/test_gps_reader.cpp`).
 
 ## Backend Testing
-- **Database:** Use a **PostgreSQL test container** (e.g., `pytest-docker` or `testcontainers`) for integration tests. Avoid SQLite in-memory for production-parity tests.
-- **Coverage Target:** 80% of `backend/app/` code.
-- **Test Organization:**
-  - `backend/tests/unit/` — Pure logic, schemas, utilities.
-  - `backend/tests/integration/` — API endpoints with test database.
-  - `backend/tests/e2e/` — Full pipeline against running services (manual in Phase 1).
+- **Database:** Use a **Testcontainers-provisioned SQL Server** for integration tests. Avoid an in-memory/SQLite fake for production-parity tests.
+- **Coverage Target:** 80% of `AssetTracker.Application/` and `AssetTracker.Infrastructure/` code.
+- **Test Organization** (single `AssetTracker.Tests` project):
+  - `Unit/` — Pure logic, DTOs, validation.
+  - `Integration/` — API endpoints (`WebApplicationFactory`) against a Testcontainers SQL Server.
+  - `E2E/` (manual in Phase 1) — Full pipeline against running services.
 
 ### Backend Test Requirements
 - **All endpoints** must have at least one integration test covering:
   - Happy path
   - Validation errors
   - Authentication/authorization failures
-- **Pydantic schemas** must have unit tests for validation rules, defaults, and serialization.
-- **Business logic** in services must be unit-tested.
+- **DTOs** must have unit tests for validation rules, defaults, and serialization.
+- **Business logic** in `Application` services must be unit-tested.
 
 ## Mocking Strategy
 ### Firmware
@@ -36,9 +36,9 @@ paths:
 - All mocks must implement the same interface as the real component.
 
 ### Backend
-- Use `pytest-mock` for patching dependencies.
-- Use `responses` or `respx` for mocking external HTTP calls.
-- Dependency injection must be used to enable mock injection; avoid monkey-patching in tests.
+- Use an interface-based mocking library (e.g., Moq) for patching dependencies.
+- Use `WireMock.Net` or a similar HTTP stub for mocking external HTTP calls.
+- Dependency injection must be used to enable mock injection; avoid static/service-locator patterns in tests.
 
 ## E2E Validation
 - **Phase 1:** E2E tests are **manual checklists** executed on real hardware.

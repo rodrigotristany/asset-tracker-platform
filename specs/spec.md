@@ -32,10 +32,10 @@ ESP32 Firmware (C++/ESP-IDF)
     │
     │ WiFi (Phase 1) / BLE Gateway (Phase 2)
     ▼
-REST API (FastAPI)
+REST API (ASP.NET Core)
     │
     ▼
-PostgreSQL Database
+SQL Server Database
     │
     ▼
 Web Dashboard (React + TypeScript)
@@ -53,7 +53,7 @@ Web Dashboard (React + TypeScript)
 2. ESP32 timestamps using GPS UTC time (primary) or NTP (fallback when WiFi connected)
 3. Device creates `Location` message
 4. POST to `POST /api/v1/locations` via HTTP over WiFi
-5. Backend validates, persists to PostgreSQL
+5. Backend validates, persists to SQL Server
 6. Dashboard queries `GET /api/v1/locations/{device_id}` and displays latest per device
 
 ### Phase 2: BLE Gateway Evaluation (Future)
@@ -246,66 +246,88 @@ struct Location {
 
 | Component | Technology |
 |-----------|------------|
-| **Runtime** | Python 3.x |
-| **Framework** | FastAPI |
-| **ORM** | SQLAlchemy |
-| **Migrations** | Alembic |
-| **Validation** | Pydantic |
-| **Database** | PostgreSQL |
+| **Runtime** | .NET (latest LTS) |
+| **Framework** | ASP.NET Core, Controller-based MVC |
+| **Architecture** | Clean Architecture — `Domain` → `Application` → `Infrastructure` → `Api` |
+| **Data Access** | Hybrid: EF Core (reads/simple CRUD) + Dapper-driven stored procedures (location/device writes, retention) |
+| **Validation** | `System.ComponentModel.DataAnnotations` |
+| **Database** | SQL Server |
 | **Deployment** | Docker Compose (local and production) |
 | **Host (Production)** | DigitalOcean Droplet (future) |
+| **CI** | Azure Pipelines (build + test) |
+
+This stack (vs. the originally-specced Python web-framework/ORM/database stack) was chosen deliberately to demonstrate .NET/C#, SQL Server (including stored procedures and database architecture), and Azure DevOps skills — see `docs/superpowers/specs/2026-08-12-backend-csharp-design.md` for the full rationale.
 
 ### 6.2 Hosting Strategy
 
 **Local Development:**
-- Docker Compose orchestrates FastAPI + PostgreSQL
-- Hot reload enabled for rapid iteration
-- Dashboard served by FastAPI static files or separate Vite dev server (proxied)
+- Docker Compose orchestrates the API + SQL Server (`mcr.microsoft.com/mssql/server:2022-latest`)
+- Dashboard served by a separate Vite dev server during development
 
 **Production (DigitalOcean Droplet):**
 - Docker Compose preferred for reproducibility and one-command deploys
-- Alternative: bare-metal `uvicorn` + PostgreSQL if Droplet memory is constrained (1-2GB)
-- Decision deferred until first production deploy attempt
+- **Known risk:** SQL Server needs materially more RAM (~2GB minimum) than the database engine it replaces; the droplet's memory sizing needs revisiting before a real production deploy (open TBD)
 
 ### 6.3 Authentication
 
 | Actor | Mechanism | Notes |
 |-------|-----------|-------|
-| **Devices** | Static API key in `X-API-Key` header | Simple, proven, fits "prove pipeline" scope |
-| **Dashboard Admin** | JWT with session storage | Read-only access; admin role only |
+| **Devices** | API key in `X-API-Key` header | Base64-encoded 32 random bytes; validated by re-hashing (SHA-256) and comparing to `devices.api_key_hash` |
+| **Dashboard Admin** | JWT (`Microsoft.AspNetCore.Authentication.JwtBearer`) | Obtained via `POST /api/v1/auth/login`; one dev-seeded admin user, no self-registration |
 
 ### 6.4 API Endpoints
 
 | Method | Endpoint | Purpose | Auth |
 |--------|----------|---------|------|
+| `POST` | `/api/v1/auth/login` | Admin login, issues JWT | None |
+| `POST` | `/api/v1/devices` | Register a device, returns its API key once | JWT |
 | `POST` | `/api/v1/locations` | Single location upload | Device API key |
 | `POST` | `/api/v1/locations/batch` | Batch upload (reconnection scenarios) | Device API key |
-| `GET` | `/api/v1/locations/{device_id}` | Latest locations for dashboard | JWT session |
+| `GET` | `/api/v1/locations/{deviceId}` | Latest location for dashboard | JWT |
 | `GET` | `/api/v1/health` | Health check / connectivity verification | None |
+
+`/api/v1/devices` and `/api/v1/auth/login` are additions beyond the original Python-era spec — they exist because the expanded, normalized schema (§6.5) requires a real `devices` row (with a hashed API key) before any location can be written.
 
 ### 6.5 Data Schema
 
 ```sql
--- locations table
-CREATE TABLE locations (
-    id SERIAL PRIMARY KEY,
-    device_id VARCHAR(64) NOT NULL,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-    latitude DOUBLE PRECISION NOT NULL,
-    longitude DOUBLE PRECISION NOT NULL,
-    altitude DOUBLE PRECISION,
-    speed DOUBLE PRECISION,
-    satellites SMALLINT,
-    hdop DOUBLE PRECISION,
-    battery_voltage DOUBLE PRECISION,
-    is_stale BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+CREATE TABLE devices (
+    id INT IDENTITY PRIMARY KEY,
+    device_id VARCHAR(64) NOT NULL UNIQUE,
+    display_name VARCHAR(128) NULL,
+    api_key_hash VARBINARY(64) NOT NULL,
+    is_active BIT NOT NULL DEFAULT 1,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 
-CREATE INDEX idx_locations_device_timestamp ON locations (device_id, timestamp DESC);
+CREATE TABLE locations (
+    id BIGINT IDENTITY PRIMARY KEY,
+    device_fk INT NOT NULL FOREIGN KEY REFERENCES devices(id),
+    [timestamp] DATETIMEOFFSET NOT NULL,
+    latitude FLOAT NOT NULL,
+    longitude FLOAT NOT NULL,
+    altitude FLOAT NULL,
+    speed FLOAT NULL,
+    satellites TINYINT NULL,
+    hdop FLOAT NULL,
+    battery_voltage FLOAT NULL,
+    is_stale BIT NOT NULL DEFAULT 0,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
+
+CREATE INDEX idx_locations_device_timestamp ON locations (device_fk, [timestamp] DESC);
+
+CREATE TABLE admin_users (
+    id INT IDENTITY PRIMARY KEY,
+    username VARCHAR(64) NOT NULL UNIQUE,
+    password_hash VARCHAR(60) NOT NULL,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
 ```
 
-**Retention:** 30-day rolling window. Automated cleanup job (Alembic migration + cron or TTL).
+**Retention:** 30-day rolling window, enforced by the `usp_Retention_PurgeOldLocations` stored procedure. Scheduling mechanism (SQL Agent job vs. hosted background service) is an open TBD.
+
+See `specs/backend/models.md` for the full table/procedure reference and the EF Core/Dapper access-pattern split.
 
 ### 6.6 Request/Response Contracts
 
@@ -335,15 +357,19 @@ CREATE INDEX idx_locations_device_timestamp ON locations (device_id, timestamp D
 
 **Errors:**
 - `400 Bad Request` — Validation error (missing fields, invalid coordinates)
-- `401 Unauthorized` — Missing or invalid API key
-- `429 Too Many Requests` — Rate limit exceeded (future; not blocking Phase 1)
+- `401 Unauthorized` — Missing or invalid API key / JWT
+- `403 Forbidden` — Authenticated device's identity doesn't match the request's `deviceId` (`"error": "FORBIDDEN"`); applies to both `/api/v1/locations` and `/api/v1/locations/batch` (checked per-item for batch)
+- `404 Not Found` — Unknown `deviceId` on a location write
+- `409 Conflict` — Duplicate `deviceId` on device registration
+
+See `specs/backend/api.md` for the full endpoint reference including the new `/devices` and `/auth/login` contracts.
 
 ### 6.7 Additional Backend Features
 
-- **CORS:** Enabled for local dashboard development
-- **OpenAPI:** Auto-generated at `/docs` (Swagger UI) and `/redoc`
-- **Compression:** Gzip enabled for responses
-- **Logging:** Structured JSON logs with request ID tracing
+- **CORS:** Enabled for local dashboard development (`http://localhost:5173`)
+- **OpenAPI:** Auto-generated Swagger UI at `/swagger` (Swashbuckle.AspNetCore) in the Development environment
+- **Compression:** Gzip enabled for responses (`Microsoft.AspNetCore.ResponseCompression`)
+- **Logging:** Structured logs; unhandled exceptions logged with request trace ID via `ErrorHandlingMiddleware`
 
 ---
 
@@ -365,12 +391,12 @@ CREATE INDEX idx_locations_device_timestamp ON locations (device_id, timestamp D
 
 **Phase 1:**
 - Vite dev server during development
-- FastAPI serves built static files (`/static`) in production (via `StaticFiles`)
+- ASP.NET Core serves built static files (`/static`) in production (via `UseStaticFiles`)
 
 **Phase 2:**
 - Built with `vite build`
 - `dist/` copied to droplet
-- Served by FastAPI or nginx on droplet
+- Served by ASP.NET Core or nginx on droplet
 
 ### 7.3 Features (Phase 1)
 
@@ -399,7 +425,7 @@ CREATE INDEX idx_locations_device_timestamp ON locations (device_id, timestamp D
 This schema is used by both firmware and backend to ensure consistency.
 
 ```typescript
-// Shared TypeScript type (also reflected in Pydantic model)
+// Shared TypeScript type (also reflected in AssetTracker.Application.Dtos.LocationCreateDto)
 interface Location {
     deviceId: string;
     timestamp: string;          // ISO 8601 UTC
@@ -436,13 +462,13 @@ interface Location {
 
 ### Backend
 
-- **Language:** Python 3.x
-- **Framework:** FastAPI
-- **ORM:** SQLAlchemy 2.x
-- **Migrations:** Alembic
-- **Validation:** Pydantic v2
-- **Database:** PostgreSQL
+- **Language:** C# / .NET (latest LTS)
+- **Framework:** ASP.NET Core (Controller MVC)
+- **Architecture:** Clean Architecture (Domain/Application/Infrastructure/Api)
+- **Data Access:** EF Core (reads/simple CRUD) + Dapper-driven stored procedures (writes)
+- **Database:** SQL Server
 - **Deployment:** Docker Compose
+- **CI:** Azure Pipelines
 
 ### Frontend
 
@@ -471,8 +497,8 @@ interface Location {
 3. **Parse Coordinates** — Extract lat, lon, alt, speed, sats, HDOP from NMEA
 4. **Display Parsed Data** — Show coordinates on LCD
 5. **WiFi Connection** — Connect to AP using configured credentials
-6. **HTTP POST to API** — Send parsed location to local FastAPI server
-7. **PostgreSQL Persistence** — Backend receives and stores location in database
+6. **HTTP POST to API** — Send parsed location to local ASP.NET Core server
+7. **SQL Server Persistence** — Backend receives and stores location in database
 8. **Live Dashboard** — Web page displays latest location per device
 
 **Phase 1 Exit Criteria:** 2 devices stream 1Hz data continuously for 24 hours with live dashboard updates.
@@ -499,8 +525,8 @@ interface Location {
 
 ### Backend Tests
 
-- **Unit Tests:** pytest for business logic (e.g., retry logic, `is_stale` flag handling)
-- **Integration Tests:** pytest + TestClient against FastAPI app with test database
+- **Unit Tests:** `dotnet test` (xUnit) for business logic (e.g., retry logic, `is_stale` flag handling)
+- **Integration Tests:** xUnit + `WebApplicationFactory` against the ASP.NET Core app with a Testcontainers-provisioned SQL Server
 - **Coverage Target:** Core API paths and error handling
 
 ### End-to-End Tests
@@ -520,21 +546,19 @@ interface Location {
 | **API Reference** | `docs/api.md` | OpenAPI auto-generated (Swagger UI) + manual endpoint descriptions |
 | **Architecture** | `docs/architecture.md` | System diagrams, data flow, class relationships |
 | **Firmware Setup** | `docs/firmware-setup.md` | ESP-IDF installation, build, flash, monitor |
-| **Backend Setup** | `docs/backend-setup.md` | Docker Compose, database migrations, virtual env |
+| **Backend Setup** | `docs/backend-setup.md` | Docker Compose, EF Core migrations, .NET SDK setup |
 | **Dashboard Setup** | `docs/dashboard-setup.md` | Node.js, Vite dev server, build for production |
 
 ---
 
 ## 13. CI/CD
 
-**Phase 1:** Manual builds for both firmware and backend.
+**Backend:** Azure Pipelines (`azure-pipelines.yml`, repo root) runs restore/build/test on every push to `main`, including integration tests against a Testcontainers-provisioned SQL Server. No deploy stage yet.
 
 **Phase 2 (Planned):**
-- **GitHub Actions:**
-  - Lint and type-check (frontend and backend)
-  - Backend unit + integration tests on every PR
-  - Firmware build verification (compile check without flash)
-  - Docker image build and push on merge to main
+- Extend the Azure Pipelines definition with lint/type-check for firmware and frontend
+- Firmware build verification (compile check without flash)
+- Docker image build and push on merge to main
 - **Artifacts:**
   - Firmware binaries (auto-generated)
   - Backend Docker images
@@ -556,12 +580,15 @@ asset-tracker-platform/
 │   ├── domain/
 │   ├── utils/
 │   └── storage/
-├── backend/               # FastAPI application
-│   ├── app/
-│   ├── alembic/
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   └── pyproject.toml / requirements.txt
+├── backend/               # ASP.NET Core Clean Architecture solution
+│   ├── AssetTracker.sln
+│   ├── AssetTracker.Domain/
+│   ├── AssetTracker.Application/
+│   ├── AssetTracker.Infrastructure/
+│   ├── AssetTracker.Api/
+│   │   └── Dockerfile
+│   ├── AssetTracker.Tests/
+│   └── docker-compose.yml
 ├── dashboard/             # React + TypeScript frontend
 │   ├── src/
 │   ├── package.json

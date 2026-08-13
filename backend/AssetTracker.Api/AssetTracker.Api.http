@@ -1,0 +1,6 @@
+@AssetTracker.Api_HostAddress = http://localhost:5125
+
+GET {{AssetTracker.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

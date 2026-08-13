@@ -6,16 +6,24 @@ paths:
 # General Coding Rules
 
 ## Naming Conventions
-- **Functions / variables / files:** `snake_case`
-- **Classes / structs / types:** `PascalCase`
+- **Functions / variables / files (C++):** `snake_case`
+- **Classes / structs / types (all languages):** `PascalCase`
 - **Constants / macros:** `UPPER_SNAKE_CASE`
 - **JSON / API payloads:** `camelCase` (matches spec schema)
 - **Database columns / tables:** `snake_case` (per backend.md)
 
+### C# (backend) — supersedes the blanket rule above
+- **Types, public members, methods:** `PascalCase` (e.g., `LocationService`, `GetLatestByDeviceAsync`).
+- **Local variables, method parameters:** `camelCase`.
+- **Interfaces:** `I` prefix + `PascalCase` (e.g., `ILocationRepository`).
+- **Private fields:** `_camelCase` (e.g., `_connectionString`).
+- **Async methods:** `Async` suffix (e.g., `RegisterAsync`).
+- **File names:** match the type they contain, `PascalCase.cs` (e.g., `LocationRepository.cs`).
+
 ## Comments & Documentation
 - Document all **public APIs** (headers, public methods, exported functions).
 - Use Doxygen style (`/** ... */`) for C++ firmware.
-- Use Google-style docstrings for Python backend.
+- Use XML doc comments (`///`) for public C# APIs in the backend.
 - Use JSDoc for TypeScript dashboard code.
 - No requirement to document private helpers unless logic is non-obvious.
 
@@ -27,9 +35,9 @@ paths:
 - Return `Result<T>` types for operations that can fail with context.
 - Always log errors before recovery actions.
 
-### Backend (Python)
-- Use Pydantic validation for all incoming data.
-- Raise custom exceptions for business logic errors.
+### Backend (C#)
+- Use `DataAnnotations` validation for all incoming DTOs.
+- Raise custom exceptions (`Application.Exceptions`) for business logic errors.
 - Return structured JSON error responses (see backend.md).
 - Never leak stack traces in production responses.
 

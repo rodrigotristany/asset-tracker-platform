@@ -40,6 +40,6 @@ class ApiClient {
 ```
 
 ## Notes
-- TypeScript types in `types.md` must match backend Pydantic schemas exactly.
+- TypeScript types in `types.md` must match backend DTOs exactly.
 - Phase 1: no maps, no realtime websocket, polling via TanStack Query is acceptable.
-- Phase 2: generate types from backend `/docs` OpenAPI spec.
+- Phase 2: generate types from backend `/swagger` OpenAPI spec.

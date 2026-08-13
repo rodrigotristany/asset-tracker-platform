@@ -1,0 +1,4 @@
+# Local build artifacts — don't bloat the build context or leak host-platform binaries
+# into the Linux build stage.
+**/bin/
+**/obj/
