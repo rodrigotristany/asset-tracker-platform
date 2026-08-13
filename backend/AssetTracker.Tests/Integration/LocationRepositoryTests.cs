@@ -55,6 +55,51 @@ public class LocationRepositoryTests
         Assert.All(saved, l => Assert.True(l.Id > 0));
     }
 
+    // The DataTable that feeds LocationTableType binds columns POSITIONALLY, not by name (unlike
+    // the Dapper named-parameter binding used by InsertAsync). Six of the nine columns are all
+    // FLOAT (latitude, longitude, altitude, speed, hdop, battery_voltage), so a pairwise column
+    // transposition in LocationRepository.BatchInsertAsync or in LocationTableType.sql's declared
+    // column order would be silently type-compatible and undetectable by SQL Server. This test
+    // uses distinct, non-null values in every field of every row (never symmetric like (1,1)/(2,2))
+    // and asserts every field individually, so a transposed pair of columns produces a value
+    // mismatch instead of passing unnoticed.
+    [Fact]
+    public async Task BatchInsertAsync_PersistsEveryFieldInDeclaredColumnOrder()
+    {
+        var device = await RegisterDeviceAsync();
+        var repository = new LocationRepository(_fixture.ConnectionString);
+        var now = DateTimeOffset.UtcNow;
+        var locations = new List<Location>
+        {
+            new(device.Id, now.AddMinutes(-2), 10.111, -20.222, 100.5, 5.25, 7, 1.1, 3.71, false),
+            new(device.Id, now.AddMinutes(-1), 20.222, -30.333, 200.5, 15.5, 9, 2.2, 3.82, true),
+            new(device.Id, now, 30.333, -40.444, 300.5, 25.75, 11, 3.3, 3.93, false)
+        };
+
+        var saved = await repository.BatchInsertAsync(locations, CancellationToken.None);
+
+        Assert.Equal(locations.Count, saved.Count);
+        var orderedExpected = locations.OrderBy(l => l.Timestamp).ToList();
+        var orderedActual = saved.OrderBy(l => l.Timestamp).ToList();
+
+        for (var i = 0; i < orderedExpected.Count; i++)
+        {
+            var expected = orderedExpected[i];
+            var actual = orderedActual[i];
+
+            Assert.Equal(device.Id, actual.DeviceFk);
+            Assert.Equal(expected.Timestamp, actual.Timestamp);
+            Assert.Equal(expected.Latitude, actual.Latitude);
+            Assert.Equal(expected.Longitude, actual.Longitude);
+            Assert.Equal(expected.Altitude, actual.Altitude);
+            Assert.Equal(expected.Speed, actual.Speed);
+            Assert.Equal(expected.Satellites, actual.Satellites);
+            Assert.Equal(expected.Hdop, actual.Hdop);
+            Assert.Equal(expected.BatteryVoltage, actual.BatteryVoltage);
+            Assert.Equal(expected.IsStale, actual.IsStale);
+        }
+    }
+
     [Fact]
     public async Task GetLatestByDeviceAsync_ReturnsOnlyMostRecentLocation()
     {
