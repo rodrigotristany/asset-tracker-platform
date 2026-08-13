@@ -260,6 +260,39 @@ public class LocationsEndpointTests : IClassFixture<ApiFactoryFixture>
     }
 
     [Fact]
+    public async Task CreateBatch_WithMismatchedItemDeviceId_ReturnsForbidden()
+    {
+        var (deviceIdOfDeviceB, apiKeyOfDeviceB) = await RegisterDeviceAsync();
+        var (deviceIdOfDeviceA, _) = await RegisterDeviceAsync();
+
+        // Top-level DeviceId correctly matches the authenticated device (device B), so the
+        // request would pass the top-level EnsureDeviceOwnership check alone. This isolates
+        // the per-item check: only the second item's DeviceId is forged as device A's. If
+        // LocationsController ever stopped validating per-item DeviceId values, this is the
+        // test that would catch it - unlike the top-level mismatch test, which sets every
+        // DeviceId to the same victim value and can't distinguish which check caught it.
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/locations/batch")
+        {
+            Content = JsonContent.Create(new LocationBatchCreateDto
+            {
+                DeviceId = deviceIdOfDeviceB,
+                Locations = new List<LocationCreateDto>
+                {
+                    new() { DeviceId = deviceIdOfDeviceB, Timestamp = DateTimeOffset.UtcNow.AddMinutes(-1), Latitude = 1, Longitude = 1 },
+                    new() { DeviceId = deviceIdOfDeviceA, Timestamp = DateTimeOffset.UtcNow, Latitude = 2, Longitude = 2 }
+                }
+            })
+        };
+        request.Headers.Add("X-API-Key", apiKeyOfDeviceB);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        Assert.Equal("FORBIDDEN", body!["error"].GetString());
+    }
+
+    [Fact]
     public async Task GetLatestByDevice_WithoutJwt_ReturnsUnauthorized()
     {
         var response = await _client.GetAsync("/api/v1/locations/some-device");

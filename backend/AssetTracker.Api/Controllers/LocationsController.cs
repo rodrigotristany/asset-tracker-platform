@@ -33,6 +33,19 @@ public class LocationsController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<LocationCreateResponseDto>>> CreateBatch([FromBody] LocationBatchCreateDto request, CancellationToken ct)
     {
         EnsureDeviceOwnership(request.DeviceId);
+
+        // LocationService.CreateBatchAsync currently ignores each item's DeviceId and only
+        // trusts the batch's top-level DeviceId - but the DTO still carries a per-item
+        // DeviceId that DataAnnotations validates. If a future change starts reading it
+        // (e.g. to support mixed-device batches), it must not silently reopen the same
+        // forgery path the top-level check above closes. Verify every item here too, even
+        // though the service doesn't need it today, so there's no discarded field that a
+        // later refactor could quietly turn into an authorization bypass.
+        foreach (var item in request.Locations)
+        {
+            EnsureDeviceOwnership(item.DeviceId);
+        }
+
         var response = await _locationService.CreateBatchAsync(request, ct);
         return StatusCode(StatusCodes.Status201Created, response);
     }
@@ -50,7 +63,9 @@ public class LocationsController : ControllerBase
     /// (see ApiKeyAuthenticationHandler), but that alone does not stop the authenticated device
     /// from writing location data for a DIFFERENT device by putting a different deviceId in the
     /// request body. Enforce object-level authorization here: the authenticated device's
-    /// identifier must match the deviceId the request is submitting data for.
+    /// identifier must match the deviceId the request is submitting data for. Called for both
+    /// the top-level DeviceId and (in CreateBatch) each item's own DeviceId, so there is no
+    /// deviceId anywhere in the request that goes unchecked.
     /// </summary>
     private void EnsureDeviceOwnership(string requestedDeviceId)
     {
