@@ -51,6 +51,15 @@ public class ErrorHandlingMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_WithLocationNotFoundException_Returns404WithLocationNotFoundError()
+    {
+        var (statusCode, body) = await InvokeAsync(new LocationNotFoundException("missing-device"));
+
+        Assert.Equal((int)HttpStatusCode.NotFound, statusCode);
+        Assert.Equal("LOCATION_NOT_FOUND", body.GetProperty("error").GetString());
+    }
+
+    [Fact]
     public async Task InvokeAsync_WithDeviceOwnershipMismatchException_Returns403WithForbiddenError()
     {
         var (statusCode, body) = await InvokeAsync(new DeviceOwnershipMismatchException("device-b", "device-a"));

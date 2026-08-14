@@ -325,8 +325,23 @@ public class LocationsEndpointTests : IClassFixture<ApiFactoryFixture>
         var response = await _client.SendAsync(getRequest);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<List<LocationReadDto>>();
-        var single = Assert.Single(body!);
-        Assert.Equal(deviceId, single.DeviceId);
+        var body = await response.Content.ReadFromJsonAsync<LocationReadDto>();
+        Assert.Equal(deviceId, body!.DeviceId);
+    }
+
+    [Fact]
+    public async Task GetLatestByDevice_WithNoRecordedLocation_ReturnsNotFound()
+    {
+        var (deviceId, _) = await RegisterDeviceAsync();
+        var token = await TestAuthHelper.GetAdminJwtAsync(_client);
+
+        using var getRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/locations/{deviceId}");
+        getRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.SendAsync(getRequest);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        Assert.Equal("LOCATION_NOT_FOUND", body!["error"].GetString());
     }
 }

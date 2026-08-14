@@ -47,23 +47,24 @@ public class LocationService : ILocationService
         return saved.Select(l => new LocationCreateResponseDto { Id = l.Id, Status = "accepted" }).ToList();
     }
 
-    public async Task<IReadOnlyList<LocationReadDto>> GetLatestByDeviceAsync(string deviceId, CancellationToken ct)
+    public async Task<LocationReadDto> GetLatestByDeviceAsync(string deviceId, CancellationToken ct)
     {
-        var locations = await _locationRepository.GetLatestByDeviceAsync(deviceId, ct);
+        var location = await _locationRepository.GetLatestByDeviceAsync(deviceId, ct)
+            ?? throw new LocationNotFoundException(deviceId);
 
-        return locations.Select(l => new LocationReadDto
+        return new LocationReadDto
         {
-            Id = l.Id,
+            Id = location.Id,
             DeviceId = deviceId,
-            Timestamp = l.Timestamp,
-            Latitude = l.Latitude,
-            Longitude = l.Longitude,
-            Altitude = l.Altitude,
-            Speed = l.Speed,
-            Satellites = l.Satellites,
-            Hdop = l.Hdop,
-            BatteryVoltage = l.BatteryVoltage,
-            IsStale = l.IsStale
-        }).ToList();
+            Timestamp = location.Timestamp,
+            Latitude = location.Latitude,
+            Longitude = location.Longitude,
+            Altitude = location.Altitude,
+            Speed = location.Speed,
+            Satellites = location.Satellites,
+            Hdop = location.Hdop,
+            BatteryVoltage = location.BatteryVoltage,
+            IsStale = location.IsStale
+        };
     }
 }

@@ -50,16 +50,24 @@ public class LocationServiceTests
     }
 
     [Fact]
-    public async Task GetLatestByDeviceAsync_ReturnsMappedDtos()
+    public async Task GetLatestByDeviceAsync_ReturnsMappedDto()
     {
         var location = Location.Reconstitute(1, 5, DateTimeOffset.UtcNow, 10, 20, null, null, null, null, null, true, DateTime.UtcNow);
         _locationRepository.Setup(r => r.GetLatestByDeviceAsync("goat-001", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Location> { location });
+            .ReturnsAsync(location);
 
         var result = await _sut.GetLatestByDeviceAsync("goat-001", CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal("goat-001", result[0].DeviceId);
-        Assert.True(result[0].IsStale);
+        Assert.Equal("goat-001", result.DeviceId);
+        Assert.True(result.IsStale);
+    }
+
+    [Fact]
+    public async Task GetLatestByDeviceAsync_WithNoRecordedLocation_ThrowsLocationNotFoundException()
+    {
+        _locationRepository.Setup(r => r.GetLatestByDeviceAsync("goat-001", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Location?)null);
+
+        await Assert.ThrowsAsync<LocationNotFoundException>(() => _sut.GetLatestByDeviceAsync("goat-001", CancellationToken.None));
     }
 }

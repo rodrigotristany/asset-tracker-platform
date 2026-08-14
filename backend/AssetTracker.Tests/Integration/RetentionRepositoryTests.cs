@@ -43,8 +43,8 @@ public class RetentionRepositoryTests
         Assert.Equal(1, await CountLocationsForDeviceAsync(device.Id));
 
         var remaining = await locationRepository.GetLatestByDeviceAsync(device.DeviceId, CancellationToken.None);
-        Assert.Single(remaining);
-        Assert.Equal(savedRecent.Id, remaining[0].Id);
+        Assert.NotNull(remaining);
+        Assert.Equal(savedRecent.Id, remaining!.Id);
     }
 
     private async Task<int> CountLocationsForDeviceAsync(int deviceFk)

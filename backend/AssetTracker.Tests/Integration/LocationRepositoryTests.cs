@@ -110,18 +110,18 @@ public class LocationRepositoryTests
 
         var result = await repository.GetLatestByDeviceAsync(device.DeviceId, CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal(newest.Id, result[0].Id);
+        Assert.NotNull(result);
+        Assert.Equal(newest.Id, result!.Id);
     }
 
     [Fact]
-    public async Task GetLatestByDeviceAsync_WithNoLocations_ReturnsEmptyList()
+    public async Task GetLatestByDeviceAsync_WithNoLocations_ReturnsNull()
     {
         var device = await RegisterDeviceAsync();
         var repository = new LocationRepository(_fixture.ConnectionString);
 
         var result = await repository.GetLatestByDeviceAsync(device.DeviceId, CancellationToken.None);
 
-        Assert.Empty(result);
+        Assert.Null(result);
     }
 }

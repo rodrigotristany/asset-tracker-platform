@@ -52,7 +52,7 @@ public class LocationsController : ControllerBase
 
     [HttpGet("{deviceId}")]
     [Authorize(AuthenticationSchemes = AuthSchemes.Jwt)]
-    public async Task<ActionResult<IReadOnlyList<LocationReadDto>>> GetLatestByDevice(string deviceId, CancellationToken ct)
+    public async Task<ActionResult<LocationReadDto>> GetLatestByDevice(string deviceId, CancellationToken ct)
     {
         var response = await _locationService.GetLatestByDeviceAsync(deviceId, ct);
         return Ok(response);

@@ -84,7 +84,7 @@ public class LocationRepository : ILocationRepository
         return rows.Select(r => r.ToEntity()).ToList();
     }
 
-    public async Task<IReadOnlyList<Location>> GetLatestByDeviceAsync(string deviceId, CancellationToken ct)
+    public async Task<Location?> GetLatestByDeviceAsync(string deviceId, CancellationToken ct)
     {
         await using var connection = new SqlConnection(_connectionString);
         var row = await connection.QuerySingleOrDefaultAsync<LocationRow>(
@@ -94,7 +94,7 @@ public class LocationRepository : ILocationRepository
                 commandType: CommandType.StoredProcedure,
                 cancellationToken: ct));
 
-        return row is null ? Array.Empty<Location>() : new[] { row.ToEntity() };
+        return row?.ToEntity();
     }
 
     private sealed class LocationRow

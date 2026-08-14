@@ -43,6 +43,7 @@ public class ErrorHandlingMiddleware
     private static (HttpStatusCode StatusCode, string Error) MapException(Exception exception) => exception switch
     {
         DeviceNotFoundException => (HttpStatusCode.NotFound, "DEVICE_NOT_FOUND"),
+        LocationNotFoundException => (HttpStatusCode.NotFound, "LOCATION_NOT_FOUND"),
         DeviceAlreadyExistsException => (HttpStatusCode.Conflict, "DEVICE_ALREADY_EXISTS"),
         InvalidCredentialsException => (HttpStatusCode.Unauthorized, "INVALID_CREDENTIALS"),
         DeviceOwnershipMismatchException => (HttpStatusCode.Forbidden, "FORBIDDEN"),
