@@ -284,6 +284,7 @@ This stack (vs. the originally-specced Python web-framework/ORM/database stack) 
 | `POST` | `/api/v1/locations` | Single location upload | Device API key |
 | `POST` | `/api/v1/locations/batch` | Batch upload (reconnection scenarios) | Device API key |
 | `GET` | `/api/v1/locations/{deviceId}` | Latest location for dashboard | JWT |
+| `GET` | `/api/v1/devices` | Latest location per device (dashboard list view) | JWT |
 | `GET` | `/api/v1/health` | Health check / connectivity verification | None |
 
 `/api/v1/devices` and `/api/v1/auth/login` are additions beyond the original Python-era spec — they exist because the expanded, normalized schema (§6.5) requires a real `devices` row (with a hashed API key) before any location can be written.

@@ -1,6 +1,12 @@
 # Frontend Services — API Client
 
 ```typescript
+function deriveDeviceStatus(location: Location): "online" | "offline" | "stale" {
+  if (location.isStale) return "stale";
+  const ageMs = Date.now() - new Date(location.timestamp).getTime();
+  return ageMs > 60_000 ? "offline" : "online";
+}
+
 class ApiClient {
   private baseUrl: string;
   private token?: string;
@@ -26,7 +32,12 @@ class ApiClient {
       headers: this.authHeaders(),
     });
     if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    const locations: Location[] = await res.json();
+    return locations.map((latest) => ({
+      deviceId: latest.deviceId,
+      latest,
+      status: deriveDeviceStatus(latest),
+    }));
   }
 
   async login(username: string, password: string): Promise<AuthState> {

@@ -8,7 +8,8 @@
 | `POST` | `/api/v1/devices` | JWT | `DeviceRegisterRequestDto` | `DeviceRegisterResponseDto` | Register a device, returns its API key once |
 | `POST` | `/api/v1/locations` | `X-API-Key` | `LocationCreateDto` | `LocationCreateResponseDto` | Single upload |
 | `POST` | `/api/v1/locations/batch` | `X-API-Key` | `LocationBatchCreateDto` | `LocationCreateResponseDto[]` | Batch upload |
-| `GET` | `/api/v1/locations/{deviceId}` | JWT | `-` | `LocationReadDto[]` | Latest location for dashboard (0 or 1 item) |
+| `GET` | `/api/v1/locations/{deviceId}` | JWT | `-` | `LocationReadDto` | Latest location for one device; `404` if none recorded yet |
+| `GET` | `/api/v1/devices` | JWT | `-` | `LocationReadDto[]` | Latest location per device, one row per registered device (dashboard list) |
 | `GET` | `/api/v1/health` | None | `-` | `{"status": "ok"}` | Health/connectivity |
 
 ## Request/Response Contracts
@@ -69,6 +70,52 @@ The `apiKey` is shown exactly once — only its SHA-256 hash is stored (`devices
 ```
 
 **Error:** `401` on wrong username/password (standard envelope, `"error": "INVALID_CREDENTIALS"`).
+
+### GET /api/v1/locations/{deviceId}
+
+**Success:** `200 OK`
+```json
+{
+    "id": 1234,
+    "deviceId": "goat-001",
+    "timestamp": "2026-07-29T13:20:00Z",
+    "latitude": -31.4231,
+    "longitude": -62.0834,
+    "altitude": 142.1,
+    "speed": 0.4,
+    "satellites": 9,
+    "hdop": 0.8,
+    "batteryVoltage": 3.7,
+    "isStale": false
+}
+```
+
+**Error:** `404` (`"error": "NOT_FOUND"`) if the device has never reported a location. `401` (missing/invalid JWT).
+
+### GET /api/v1/devices
+
+**Success:** `200 OK`
+```json
+[
+    {
+        "id": 1234,
+        "deviceId": "goat-001",
+        "timestamp": "2026-07-29T13:20:00Z",
+        "latitude": -31.4231,
+        "longitude": -62.0834,
+        "altitude": 142.1,
+        "speed": 0.4,
+        "satellites": 9,
+        "hdop": 0.8,
+        "batteryVoltage": 3.7,
+        "isStale": false
+    }
+]
+```
+
+One `LocationReadDto` per registered device (its most recent location), backed by `usp_Location_GetLatestByDevice`. The dashboard derives online/offline/stale status client-side from `isStale` and timestamp age — see `specs/frontend/pages.md`.
+
+**Error:** `401` (missing/invalid JWT).
 
 ## Notes
 - Devices authenticate via `X-API-Key` header (raw key, base64-encoded 32 random bytes — validated by decoding and re-hashing with SHA-256, then comparing to `devices.api_key_hash`).
