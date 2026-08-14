@@ -1,10 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from './pages/LoginPage'
+import { DevicesPage } from './pages/DevicesPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
-
-function DevicesPagePlaceholder() {
-  return <div>Devices</div>
-}
 
 function App() {
   return (
@@ -16,7 +13,7 @@ function App() {
           path="/devices"
           element={
             <ProtectedRoute>
-              <DevicesPagePlaceholder />
+              <DevicesPage />
             </ProtectedRoute>
           }
         />
