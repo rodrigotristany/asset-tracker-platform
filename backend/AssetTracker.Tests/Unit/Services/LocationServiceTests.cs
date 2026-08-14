@@ -70,4 +70,25 @@ public class LocationServiceTests
 
         await Assert.ThrowsAsync<LocationNotFoundException>(() => _sut.GetLatestByDeviceAsync("goat-001", CancellationToken.None));
     }
+
+    [Fact]
+    public async Task GetAllLatestLocationsAsync_ReturnsMappedDtosWithDeviceIdFromRepository()
+    {
+        var locationA = Location.Reconstitute(1, 5, DateTimeOffset.UtcNow, 10, 20, null, null, null, null, null, false, DateTime.UtcNow);
+        var locationB = Location.Reconstitute(2, 6, DateTimeOffset.UtcNow, 30, 40, null, null, null, null, null, true, DateTime.UtcNow);
+        _locationRepository.Setup(r => r.GetLatestForAllDevicesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<(string DeviceId, Location Location)>
+            {
+                ("goat-001", locationA),
+                ("goat-002", locationB)
+            });
+
+        var result = await _sut.GetAllLatestLocationsAsync(CancellationToken.None);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("goat-001", result[0].DeviceId);
+        Assert.False(result[0].IsStale);
+        Assert.Equal("goat-002", result[1].DeviceId);
+        Assert.True(result[1].IsStale);
+    }
 }

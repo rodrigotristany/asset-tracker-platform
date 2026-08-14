@@ -7,4 +7,5 @@ public interface ILocationService
     Task<LocationCreateResponseDto> CreateAsync(LocationCreateDto request, CancellationToken ct);
     Task<IReadOnlyList<LocationCreateResponseDto>> CreateBatchAsync(LocationBatchCreateDto request, CancellationToken ct);
     Task<LocationReadDto> GetLatestByDeviceAsync(string deviceId, CancellationToken ct);
+    Task<IReadOnlyList<LocationReadDto>> GetAllLatestLocationsAsync(CancellationToken ct);
 }

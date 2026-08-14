@@ -97,10 +97,42 @@ public class LocationRepository : ILocationRepository
         return row?.ToEntity();
     }
 
+    public async Task<IReadOnlyList<(string DeviceId, Location Location)>> GetLatestForAllDevicesAsync(CancellationToken ct)
+    {
+        await using var connection = new SqlConnection(_connectionString);
+        var rows = await connection.QueryAsync<DeviceLocationRow>(
+            new CommandDefinition(
+                "usp_Location_GetLatestForAllDevices",
+                commandType: CommandType.StoredProcedure,
+                cancellationToken: ct));
+
+        return rows.Select(r => (r.DeviceId, r.ToEntity())).ToList();
+    }
+
     private sealed class LocationRow
     {
         public long Id { get; set; }
         public int DeviceFk { get; set; }
+        public DateTimeOffset Timestamp { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public double? Altitude { get; set; }
+        public double? Speed { get; set; }
+        public byte? Satellites { get; set; }
+        public double? Hdop { get; set; }
+        public double? BatteryVoltage { get; set; }
+        public bool IsStale { get; set; }
+        public DateTime CreatedAt { get; set; }
+
+        public Location ToEntity() => Location.Reconstitute(
+            Id, DeviceFk, Timestamp, Latitude, Longitude, Altitude, Speed, Satellites, Hdop, BatteryVoltage, IsStale, CreatedAt);
+    }
+
+    private sealed class DeviceLocationRow
+    {
+        public long Id { get; set; }
+        public int DeviceFk { get; set; }
+        public string DeviceId { get; set; } = string.Empty;
         public DateTimeOffset Timestamp { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }

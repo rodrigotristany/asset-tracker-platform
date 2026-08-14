@@ -136,4 +136,46 @@ public class DevicesEndpointTests : IClassFixture<ApiFactoryFixture>
         var body = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
         Assert.Equal("DEVICE_ALREADY_EXISTS", body!["error"].GetString());
     }
+
+    [Fact]
+    public async Task GetAllLatestLocations_WithoutJwt_ReturnsUnauthorized()
+    {
+        var response = await _client.GetAsync("/api/v1/devices");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAllLatestLocations_WithValidJwt_ReturnsOnlyDevicesWithLocations()
+    {
+        var token = await TestAuthHelper.GetAdminJwtAsync(_client);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var deviceWithLocationId = $"test-device-{Guid.NewGuid():N}";
+        var registerResponse = await _client.PostAsJsonAsync("/api/v1/devices", new DeviceRegisterRequestDto { DeviceId = deviceWithLocationId });
+        var registered = await registerResponse.Content.ReadFromJsonAsync<DeviceRegisterResponseDto>();
+
+        using var createRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/locations")
+        {
+            Content = JsonContent.Create(new LocationCreateDto
+            {
+                DeviceId = deviceWithLocationId,
+                Timestamp = DateTimeOffset.UtcNow,
+                Latitude = 1,
+                Longitude = 1
+            })
+        };
+        createRequest.Headers.Add("X-API-Key", registered!.ApiKey);
+        (await _client.SendAsync(createRequest)).EnsureSuccessStatusCode();
+
+        var deviceWithoutLocationId = $"test-device-{Guid.NewGuid():N}";
+        await _client.PostAsJsonAsync("/api/v1/devices", new DeviceRegisterRequestDto { DeviceId = deviceWithoutLocationId });
+
+        var response = await _client.GetAsync("/api/v1/devices");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<LocationReadDto>>();
+        Assert.Contains(body!, l => l.DeviceId == deviceWithLocationId);
+        Assert.DoesNotContain(body!, l => l.DeviceId == deviceWithoutLocationId);
+    }
 }

@@ -124,4 +124,36 @@ public class LocationRepositoryTests
 
         Assert.Null(result);
     }
+
+    [Fact]
+    public async Task GetLatestForAllDevicesAsync_ReturnsOneMostRecentRowPerDevice()
+    {
+        var deviceA = await RegisterDeviceAsync();
+        var deviceB = await RegisterDeviceAsync();
+        var repository = new LocationRepository(_fixture.ConnectionString);
+        await repository.InsertAsync(new Location(deviceA.Id, DateTimeOffset.UtcNow.AddMinutes(-5), 1, 1, null, null, null, null, null, false), CancellationToken.None);
+        var newestA = await repository.InsertAsync(new Location(deviceA.Id, DateTimeOffset.UtcNow, 2, 2, null, null, null, null, null, false), CancellationToken.None);
+        var newestB = await repository.InsertAsync(new Location(deviceB.Id, DateTimeOffset.UtcNow, 3, 3, null, null, null, null, null, true), CancellationToken.None);
+
+        var result = await repository.GetLatestForAllDevicesAsync(CancellationToken.None);
+
+        var resultA = Assert.Single(result, r => r.DeviceId == deviceA.DeviceId);
+        var resultB = Assert.Single(result, r => r.DeviceId == deviceB.DeviceId);
+        Assert.Equal(newestA.Id, resultA.Location.Id);
+        Assert.Equal(newestB.Id, resultB.Location.Id);
+    }
+
+    [Fact]
+    public async Task GetLatestForAllDevicesAsync_SkipsDevicesWithNoLocations()
+    {
+        var deviceWithLocation = await RegisterDeviceAsync();
+        var deviceWithoutLocation = await RegisterDeviceAsync();
+        var repository = new LocationRepository(_fixture.ConnectionString);
+        await repository.InsertAsync(new Location(deviceWithLocation.Id, DateTimeOffset.UtcNow, 1, 1, null, null, null, null, null, false), CancellationToken.None);
+
+        var result = await repository.GetLatestForAllDevicesAsync(CancellationToken.None);
+
+        Assert.Contains(result, r => r.DeviceId == deviceWithLocation.DeviceId);
+        Assert.DoesNotContain(result, r => r.DeviceId == deviceWithoutLocation.DeviceId);
+    }
 }

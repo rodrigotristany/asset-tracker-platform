@@ -67,4 +67,24 @@ public class LocationService : ILocationService
             IsStale = location.IsStale
         };
     }
+
+    public async Task<IReadOnlyList<LocationReadDto>> GetAllLatestLocationsAsync(CancellationToken ct)
+    {
+        var latestLocations = await _locationRepository.GetLatestForAllDevicesAsync(ct);
+
+        return latestLocations.Select(x => new LocationReadDto
+        {
+            Id = x.Location.Id,
+            DeviceId = x.DeviceId,
+            Timestamp = x.Location.Timestamp,
+            Latitude = x.Location.Latitude,
+            Longitude = x.Location.Longitude,
+            Altitude = x.Location.Altitude,
+            Speed = x.Location.Speed,
+            Satellites = x.Location.Satellites,
+            Hdop = x.Location.Hdop,
+            BatteryVoltage = x.Location.BatteryVoltage,
+            IsStale = x.Location.IsStale
+        }).ToList();
+    }
 }
