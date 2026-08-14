@@ -633,7 +633,7 @@ asset-tracker-platform/
 | **Battery hardware specifics** | TBD (LiPo type, capacity, charging circuit) |
 | **Production Droplet specs** | TBD (Size, region, backup strategy) |
 | **BLE Gateway hardware** | TBD (Phone app vs. dedicated gateway hardware) |
-| **Dashboard auth persistence** | TBD (Session cookie vs. localStorage JWT) |
+| **Dashboard auth persistence** | TBD (localStorage vs. in-memory JWT storage — session-cookie approach ruled out, see `docs/superpowers/specs/2026-08-12-backend-csharp-design.md` §5) |
 | **Firmware OTA strategy** | TBD (ESP-IDF OTA partitions vs. custom HTTP) |
 
 ---

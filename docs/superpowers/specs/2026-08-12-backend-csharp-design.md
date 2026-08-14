@@ -10,7 +10,7 @@ The original spec (`specs/spec.md` §6) defined the backend as Python/FastAPI/SQ
 
 **Motivation:** This project doubles as interview preparation for a role requiring strong .NET/C#, SQL Server (MSSQL 2008+) including stored procedures and database architecture, OOP principles, and Azure DevOps exposure. Design choices below are deliberately weighted toward demonstrating those specific skills, not just toward the leanest way to prove the GPS-to-dashboard pipeline.
 
-**Scope:** Backend only. Firmware (C++/ESP-IDF) and frontend (React/TypeScript) are unchanged. The JSON API contracts (camelCase field names, endpoint shapes) stay identical so neither of those layers needs to change.
+**Scope:** Backend only. Firmware (C++/ESP-IDF) is unchanged. Frontend (React/TypeScript) required updates for the new endpoints below — see `docs/superpowers/specs/2026-08-14-frontend-backend-alignment-design.md`. Existing endpoints keep camelCase field names and unchanged shapes; firmware integrations require no changes.
 
 ## 2. Technology Stack
 
@@ -114,7 +114,7 @@ Not using full ASP.NET Core Identity — it's heavier than this scope needs and 
 | `POST` | `/api/v1/devices` | JWT (admin) | **New** — device registration, required now that `locations.device_fk` has a real FK constraint |
 | `POST` | `/api/v1/auth/login` | None | **New** — explicit login endpoint issuing the JWT (implicit/unspecified in the original spec) |
 
-Request/response JSON bodies (camelCase field names, shapes) are unchanged from the original spec — firmware and frontend integrations require no changes.
+Request/response JSON bodies (camelCase field names, shapes) for the pre-existing endpoints (`/api/v1/locations`, `/api/v1/locations/batch`, `/api/v1/health`) are unchanged from the original spec — firmware integrations require no changes there. The endpoints marked **New** above required matching frontend spec updates — see `docs/superpowers/specs/2026-08-14-frontend-backend-alignment-design.md`.
 
 ## 7. Testing Strategy
 
