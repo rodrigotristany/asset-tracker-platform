@@ -15,21 +15,40 @@ class ApiClient {
 
   async getLatestLocation(deviceId: string): Promise<Location> {
     const res = await fetch(`${this.baseUrl}/api/v1/locations/${deviceId}`, {
-      headers: this.authHeader(),
+      headers: this.authHeaders(),
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   }
 
   async getDevicesSummary(): Promise<DeviceSummary[]> {
-    // TBD based on available backend endpoint
-    // Could be a dedicated summary endpoint or client-side aggregation
-    throw new Error("Not implemented: requires backend summary endpoint");
+    const res = await fetch(`${this.baseUrl}/api/v1/devices`, {
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 
   async login(username: string, password: string): Promise<AuthState> {
-    // TBD exact JWT login flow (session cookie vs token response)
-    throw new Error("Not implemented: TBD auth flow");
+    const res = await fetch(`${this.baseUrl}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const { token }: { token: string } = await res.json();
+    this.setToken(token);
+    return { isAuthenticated: true, token };
+  }
+
+  async registerDevice(deviceId: string, displayName?: string): Promise<DeviceRegistrationResult> {
+    const res = await fetch(`${this.baseUrl}/api/v1/devices`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.authHeaders() },
+      body: JSON.stringify({ deviceId, displayName }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 
   private authHeaders(): HeadersInit {
