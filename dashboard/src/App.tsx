@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from './pages/LoginPage'
 import { DevicesPage } from './pages/DevicesPage'
+import { AddDevicePage } from './pages/AddDevicePage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
 function App() {
@@ -14,6 +15,14 @@ function App() {
           element={
             <ProtectedRoute>
               <DevicesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/devices/new"
+          element={
+            <ProtectedRoute>
+              <AddDevicePage />
             </ProtectedRoute>
           }
         />
