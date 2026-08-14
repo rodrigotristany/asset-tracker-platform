@@ -9,6 +9,21 @@
 | `/devices/new` | `AddDevicePage` | Register a new device |
 | `/devices/:deviceId` | `DeviceDetailPage` | Detailed GPS data for one device |
 
+## LoginPage
+
+### Data Shape
+```typescript
+const mutation = useMutation<AuthState, Error, { username: string; password: string }>({
+  mutationFn: ({ username, password }) => api.login(username, password),
+});
+```
+
+### UI Requirements
+- Form fields: Username, Password (both required, password masked)
+- Submit calls `api.login(username, password)`
+- On success: redirect to `/devices`
+- On error (401): show "Invalid username or password" inline, keep username filled in
+
 ## DevicesPage
 
 ### Data Shape
@@ -23,8 +38,8 @@ const { data } = useQuery<DeviceSummary[]>({
 ### UI Requirements
 - Table/list of devices
 - Columns: Device ID, Last Timestamp, Latitude, Longitude, Status
-- Status derived from `is_stale` and timestamp age (e.g., >60s = offline)
-- Stale indicator: visual warning when `is_stale === true`
+- Status derived from `isStale` and timestamp age (e.g., >60s = offline)
+- Stale indicator: visual warning when `isStale === true`
 - "+ Add Device" button, links to `/devices/new`
 
 ## AddDevicePage
