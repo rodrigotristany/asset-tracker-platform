@@ -70,7 +70,8 @@ CREATE INDEX idx_locations_device_timestamp ON locations (device_fk, timestamp D
 |---|---|
 | `usp_Location_Insert` | Single location write |
 | `usp_Location_BatchInsert` | Batch location write |
-| `usp_Location_GetLatestByDevice` | Dashboard read — latest location per device |
+| `usp_Location_GetLatestByDevice` | Single-device read — latest location for one device |
+| `usp_Location_GetLatestForAllDevices` | Dashboard list read — latest location per device, across all devices with recorded history |
 | `usp_Device_Register` | Create a device, return its (hashed-and-stored) API key once |
 | `usp_Device_GetByApiKeyHash` | Device auth lookup |
 | `usp_Retention_PurgeOldLocations` | 30-day cleanup |
@@ -111,7 +112,7 @@ Not using full ASP.NET Core Identity — it's heavier than this scope needs and 
 | `GET` | `/api/v1/locations/{deviceId}` | JWT | Unchanged |
 | `GET` | `/api/v1/health` | None | Unchanged |
 | `POST` | `/api/v1/devices` | JWT (admin) | **New** — device registration, required now that `locations.device_fk` has a real FK constraint |
-| `GET` | `/api/v1/devices` | JWT (admin) | **New** — latest location per device, backed by `usp_Location_GetLatestByDevice`; powers the devices list dashboard page |
+| `GET` | `/api/v1/devices` | JWT (admin) | **New** — latest location per device, backed by `usp_Location_GetLatestForAllDevices`; powers the devices list dashboard page |
 | `POST` | `/api/v1/auth/login` | None | **New** — explicit login endpoint issuing the JWT (implicit/unspecified in the original spec) |
 
 Request/response JSON bodies (camelCase field names, shapes) for the pre-existing endpoints (`/api/v1/locations`, `/api/v1/locations/batch`, `/api/v1/health`) are unchanged from the original spec — firmware integrations require no changes there. The endpoints marked **New** above required matching frontend spec updates — see `docs/superpowers/specs/2026-08-14-frontend-backend-alignment-design.md`.

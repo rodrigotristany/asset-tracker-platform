@@ -90,7 +90,7 @@ The `apiKey` is shown exactly once — only its SHA-256 hash is stored (`devices
 }
 ```
 
-**Error:** `404` (`"error": "NOT_FOUND"`) if the device has never reported a location. `401` (missing/invalid JWT).
+**Error:** `404` (`"error": "LOCATION_NOT_FOUND"`) if the device has never reported a location. `401` (missing/invalid JWT).
 
 ### GET /api/v1/devices
 
@@ -113,7 +113,7 @@ The `apiKey` is shown exactly once — only its SHA-256 hash is stored (`devices
 ]
 ```
 
-One `LocationReadDto` per registered device (its most recent location), backed by `usp_Location_GetLatestByDevice`. The dashboard derives online/offline/stale status client-side from `isStale` and timestamp age — see `specs/frontend/pages.md`.
+One `LocationReadDto` per device that has recorded at least one location (its most recent location) — a device with no location history is simply absent from the list, not present with null fields. Backed by `usp_Location_GetLatestForAllDevices` (a distinct stored procedure from `usp_Location_GetLatestByDevice` above: the two take different parameters — one device vs. all — and once a migration ships it can never be edited in place, so the all-devices query could not simply extend the existing procedure). The dashboard derives online/offline/stale status client-side from `isStale` and timestamp age — see `specs/frontend/pages.md`.
 
 **Error:** `401` (missing/invalid JWT).
 
