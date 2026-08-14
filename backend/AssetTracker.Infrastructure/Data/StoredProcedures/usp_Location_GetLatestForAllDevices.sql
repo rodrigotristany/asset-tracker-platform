@@ -17,7 +17,7 @@ BEGIN
             l.battery_voltage AS BatteryVoltage,
             l.is_stale AS IsStale,
             l.created_at AS CreatedAt,
-            ROW_NUMBER() OVER (PARTITION BY l.device_fk ORDER BY l.[timestamp] DESC) AS RowNum
+            ROW_NUMBER() OVER (PARTITION BY l.device_fk ORDER BY l.[timestamp] DESC, l.id DESC) AS RowNum
         FROM locations l
     )
     SELECT

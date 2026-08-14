@@ -50,7 +50,7 @@ Unique index on `username`. No registration endpoint exists for this table — o
 | Table | Reads | Writes |
 |---|---|---|
 | `devices` | EF Core (`GetByDeviceIdAsync`) | Stored procedure (`usp_Device_Register`, `usp_Device_GetByApiKeyHash`) |
-| `locations` | Stored procedure (`usp_Location_GetLatestByDevice`) | Stored procedure (`usp_Location_Insert`, `usp_Location_BatchInsert` via table-valued parameter) |
+| `locations` | Stored procedure (`usp_Location_GetLatestByDevice`, `usp_Location_GetLatestForAllDevices`) | Stored procedure (`usp_Location_Insert`, `usp_Location_BatchInsert` via table-valued parameter) |
 | `admin_users` | EF Core (`GetByUsernameAsync`) | Migration seed only, no runtime writes |
 
 See `../diagrams.md` for the ORM/Dapper/stored-procedure layering.
@@ -63,7 +63,8 @@ See `../diagrams.md` for the ORM/Dapper/stored-procedure layering.
 | `usp_Device_GetByApiKeyHash` | Device auth lookup |
 | `usp_Location_Insert` | Single location write |
 | `usp_Location_BatchInsert` | Batch write via `LocationTableType` table-valued parameter |
-| `usp_Location_GetLatestByDevice` | Latest location for the dashboard |
+| `usp_Location_GetLatestByDevice` | Single-device read — latest location for one device |
+| `usp_Location_GetLatestForAllDevices` | Dashboard list read — latest location per device, across all devices with recorded history |
 | `usp_Retention_PurgeOldLocations` | Deletes rows older than the retention window (default 30 days), returns count deleted |
 
 ## Retention
