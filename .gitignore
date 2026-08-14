@@ -77,3 +77,9 @@ Testing/
 backend/**/bin/
 backend/**/obj/
 backend/**/*.user
+
+# Node / dashboard
+dashboard/node_modules/
+dashboard/dist/
+dashboard/dist-ssr/
+dashboard/*.local

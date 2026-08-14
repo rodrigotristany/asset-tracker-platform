@@ -385,7 +385,7 @@ See `specs/backend/api.md` for the full endpoint reference including the new `/d
 | **Build Tool** | Vite |
 | **Styling** | Tailwind CSS |
 | **State Management** | TanStack Query (React Query) for server state |
-| **Routing** | React Router v6 |
+| **Routing** | React Router v7 (upgraded from the originally-specced v6 — the whole 6.x line carries two unpatched moderate CVEs, GHSA-wrjc-x8rr-h8h6 and GHSA-337j-9hxr-rhxg; the library-mode API used here, `BrowserRouter`/`Routes`/`Route`/`Navigate`/`useNavigate`/`useParams`, is unchanged between the two) |
 | **Maps** | None (not required) |
 
 ### 7.2 Hosting Strategy
@@ -593,8 +593,7 @@ asset-tracker-platform/
 ├── dashboard/             # React + TypeScript frontend
 │   ├── src/
 │   ├── package.json
-│   ├── vite.config.ts
-│   ├── tailwind.config.js
+│   ├── vite.config.ts     # Tailwind v4 configured here via @tailwindcss/vite (no separate tailwind.config.js)
 │   └── tsconfig.json
 ├── docs/                  # Documentation
 │   ├── hardware-wiring.md
