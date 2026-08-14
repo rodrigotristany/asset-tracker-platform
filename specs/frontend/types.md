@@ -40,3 +40,17 @@ export interface AuthState {
   token?: string;
 }
 ```
+
+## Device Registration
+
+```typescript
+export interface DeviceRegistrationRequest {
+  deviceId: string;
+  displayName?: string;
+}
+
+export interface DeviceRegistrationResult {
+  deviceId: string;
+  apiKey: string; // shown once, never retrievable again
+}
+```
