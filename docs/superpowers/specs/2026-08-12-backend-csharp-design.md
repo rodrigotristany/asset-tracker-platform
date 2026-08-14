@@ -98,7 +98,7 @@ This preserves the existing repo-wide rule (`.clinerules/architecture.md`) of st
 Same two-actor split as the original spec, translated to C#:
 
 - **Devices:** `X-API-Key` header, validated against `devices.api_key_hash` via `usp_Device_GetByApiKeyHash`.
-- **Dashboard admin:** username/password (BCrypt-hashed) checked against `admin_users`, issues a JWT via `Microsoft.AspNetCore.Authentication.JwtBearer`, cookie-based session.
+- **Dashboard admin:** username/password (BCrypt-hashed) checked against `admin_users`; `POST /api/v1/auth/login` issues a JWT via `Microsoft.AspNetCore.Authentication.JwtBearer`, returned in the JSON response body as `{ token: string }`. The frontend stores the token and sends it as `Authorization: Bearer <token>` on subsequent requests — no cookie is used.
 
 Not using full ASP.NET Core Identity — it's heavier than this scope needs and would obscure the hand-built OOP/security fundamentals that are more relevant to demonstrate here.
 
@@ -109,6 +109,7 @@ Not using full ASP.NET Core Identity — it's heavier than this scope needs and 
 | `POST` | `/api/v1/locations` | API key | Unchanged from original spec |
 | `POST` | `/api/v1/locations/batch` | API key | Unchanged |
 | `GET` | `/api/v1/locations/{deviceId}` | JWT | Unchanged |
+| `GET` | `/api/v1/devices` | JWT (admin) | **New** — latest location per device, backed by `usp_Location_GetLatestByDevice`; powers the devices list dashboard page |
 | `GET` | `/api/v1/health` | None | Unchanged |
 | `POST` | `/api/v1/devices` | JWT (admin) | **New** — device registration, required now that `locations.device_fk` has a real FK constraint |
 | `POST` | `/api/v1/auth/login` | None | **New** — explicit login endpoint issuing the JWT (implicit/unspecified in the original spec) |
